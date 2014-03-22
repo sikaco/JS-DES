@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>Signin Template for Bootstrap</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="./bootstrap-3.0.2-dist/dist/css/bootstrap.css" rel="stylesheet">
+
+    <!-- Custom styles for this template -->
+    <link href="signin.css" rel="stylesheet">
+    <script src="newDes.js"></script>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <form class="form-signin">
+        <h2 class="form-signin-heading">DES加密解密</h2>
+        <input type="text" class="form-control" placeholder="请输入需要加/解密的内容" id="text" required autofocus>
+        <input type="password" class="form-control" placeholder="这里是密码" id="password" required>
+
+        <!-- /input-group
+        <div class="btn-group btn-group-lg btn-group-justified">
+            <a class="btn btn-success" role="button">加密</a>
+            <a class="btn btn-success" role="button">解密</a>
+
+        </div>
+        -->
+    </form>
+    <div class="row" id="encrypt">
+        <div class="col-lg-5">
+            <div class="input-group input-group-lg">
+                <input type="text" class="form-control" id="output">
+
+                <div class="input-group-btn">
+                    <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown">
+                        DES <span
+                            class="caret"></span></button>
+                    <ul class="dropdown-menu pull-right">
+                        <li><a href="#" onclick="executeDES('text', 'password', 'encrypt', 'output');">加密</a></li>
+                        <li><a href="#" onclick="executeDES('text', 'password', 'decrypt', 'output');">解密</a></li>
+                        <li class="divider"></li>
+                        <li><a href="#" onclick="execute3DES('text', 'password', 'encrypt', 'output');">3DES加密</a></li>
+                        <li><a href="#" onclick="execute3DES('text', 'password', 'decrypt', 'output');">3DES解密</a></li>
+                    </ul>
+                </div>
+                <!-- /btn-group -->
+            </div>
+            <!-- /input-group -->
+            <h4 id="executedTime"></h4>
+        </div>
+    </div>
+    <!-- /.row -->
+
+</div>
+<!-- /container -->
+
+
+<!-- Bootstrap core JavaScript
+================================================== -->
+<!-- Placed at the end of the document so the pages load faster -->
+<script src="jquery.min.js"></script>
+<script src="./bootstrap-3.0.2-dist/dist/js/bootstrap.min.js"></script>
+
+</body>
+</html>
