@@ -127,47 +127,56 @@ class DES {
   subkeys = []
 
   constructor() {
-    Object.assign(this, {
+    this.init()
+  }
 
+  init() {
+    Object.assign(this, {
+      text: "",  //plaintext or secret text
+      executedText: "",
+      TB_64b: "", //64 bit plaintext block
+      TB_L: "",
+      TB_R: "",
+
+      key_b: "",
+      key_56b: "",
+      C: "",
+      D: "",
+      subkey: "",
+      subkeys: [],
     })
   }
 
-  str2bin(charStr) {
-    var retBit = ""
-    for (var i = 0; i < charStr.length; i++) {
-      var temp = charStr.charCodeAt(i).toString(2)
-      retBit += "00000000".substr(temp.length) + temp
-    }
-    return retBit
+  str2bytes = async (str: string) =>
+    new Blob([str], { type: 'text/plain' }).arrayBuffer()
+      .then((buffer) => new Uint8Array(buffer))
+
+  bytes2str = async (bytes: Uint8Array) => {
+    const blob = new Blob([bytes], { type: 'text/plain' })
+    const reader = new FileReader()
+
+    return new Promise<typeof FileReader.prototype.result>((resolve) => {
+      reader.readAsText(blob, 'utf-8')
+      reader.onload = () => resolve(reader.result)
+    })
   }
 
-  bin2hex(bitStr) {
-    var hexStr = ""
-    for (var i = 0; i < bitStr.length; i += 8) {
-      var temp = parseInt(bitStr.substr(i, 8), 2).toString(16)
-      hexStr += "00".substr(temp.length) + temp
+  bytes2hexStr = (bytes: Uint8Array): string =>
+    bytes.reduce((str, byte) => str + byte.toString(16), '')
+
+  hexStr2bytes = (hexStr: string): Uint8Array => {
+    const WIDTH = 2
+    const numArr: number[] = []
+
+    for (let i = 0, len = hexStr.length; i < len; i += WIDTH) {
+      const hex = hexStr.substr(i, WIDTH)
+      numArr.push(parseInt(hex, 16))
     }
-    return hexStr
+
+    return new Uint8Array(numArr)
   }
 
-  hex2bin(hexStr) {
-    var bitStr = ""
-    for (var i = 0; i < hexStr.length; i += 2) {
-      var temp = parseInt(hexStr.substr(i, 2), 16).toString(2)
-      bitStr += "00000000".substr(temp.length) + temp
-    }
-    return bitStr
-  }
-
-  bin2asc(bitStr) {
-    var ascStr = ""
-    for (var i = 0; i < bitStr.length; i += 8) {
-      ascStr += String.fromCharCode(parseInt(bitStr.substr(i, 8), 2))
-    }
-    return ascStr
-  }
-
-  permute(inBlock, table, outblock_length) {
+  permute(inBlock, table, outblock_length) {  // todo: 主要逻辑不需要变。主要是需要改变一下输入和输出块的类型。
     var outBlock = ""
     for (var i = 0; i < outblock_length; i++) {
       outBlock += inBlock[table[i] - 1]
@@ -224,82 +233,78 @@ class DES {
     this.TB_64b = this.TB_L + this.TB_R
     this.TB_64b = this.permute(this.TB_64b, DES.IPR_Table, 64)
   }
+}
 
-  execute(inputText, key, mode) {
-    this.executedText = ""
-    this.TB_64b = ""
-    this.TB_L = ""
-    this.TB_R = ""
-    this.key_b = ""
-    this.key_56b = ""
-    this.C = ""
-    this.D = ""
-    this.subkey = ""
-    this.subkeys = []
+async function encrypt(inputText, key) {
+  this.init()
 
-    this.text = inputText
-    this.key_b = this.str2bin(key)
-    if (mode == "encrypt") {
-      for (var j = 0; j < 16; j++) {
-        this.subkeys[j] = this.subkeyCreate(j)
-      }
-      for (var i = 0, NotBeEncryptByte = this.text.length; NotBeEncryptByte >= 8; i += 8, NotBeEncryptByte -= 8) {
-        this.TB_64b = this.str2bin(this.text.substr(i, 8))
-        this.IP()
-        for (j = 0; j < 15; j++) {
-          var originalR = this.TB_R
-          this.TB_R = this.Xor(this.TB_L, this.F_func(this.TB_R, this.subkeys[j]))
-          this.TB_L = originalR
-        }
-        this.TB_L = this.Xor(this.TB_L, this.F_func(this.TB_R, this.subkeys[15]))
-        this.RIP()
-        this.executedText += this.bin2hex(this.TB_64b)
-      }
-      if (NotBeEncryptByte != 0) {
-        this.TB_64b = this.str2bin(this.text.substr(this.text.length - NotBeEncryptByte)) +
-          "0000000000000000000000000000000000000000000000000000000000000000".substr(8 * NotBeEncryptByte)
-        this.IP()
-        for (j = 0; j < 15; j++) {
-          originalR = this.TB_R
-          this.TB_R = this.Xor(this.TB_L, this.F_func(this.TB_R, this.subkeys[j]))
-          this.TB_L = originalR
-        }
-        this.TB_L = this.Xor(this.TB_L, this.F_func(this.TB_R, this.subkeys[15]))
-        this.RIP()
-        this.executedText += this.bin2hex(this.TB_64b)
-      }
-    } else if (mode == "decrypt") {
-      for (j = 0; j < 16; j++) {
-        this.subkeys[15 - j] = this.subkeyCreate(j)
-      }
-      for (i = 0, NotBeEncryptByte = this.text.length; NotBeEncryptByte >= 16; i += 16, NotBeEncryptByte -= 16) {
-        this.TB_64b = this.hex2bin(this.text.substr(i, 16))
-        this.IP()
-        for (j = 0; j < 15; j++) {
-          originalR = this.TB_R
-          this.TB_R = this.Xor(this.TB_L, this.F_func(this.TB_R, this.subkeys[j]))
-          this.TB_L = originalR
-        }
-        this.TB_L = this.Xor(this.TB_L, this.F_func(this.TB_R, this.subkeys[15]))
-        this.RIP()
-        this.executedText += this.bin2asc(this.TB_64b)
-      }
-      if (NotBeEncryptByte != 0) {
-        this.TB_64b = this.hex2bin(this.text.substr(this.text.length - NotBeEncryptByte)) +
-          "0000000000000000000000000000000000000000000000000000000000000000".substr(8 * NotBeEncryptByte)
-        this.IP()
-        for (j = 0; j < 15; j++) {
-          originalR = this.TB_R
-          this.TB_R = this.Xor(this.TB_L, this.F_func(this.TB_R, this.subkeys[j]))
-          this.TB_L = originalR
-        }
-        this.TB_L = this.Xor(this.TB_L, this.F_func(this.TB_R, this.subkeys[15]))
-        this.RIP()
-        this.executedText += this.bin2asc(this.TB_64b)
-      }
+  this.text = inputText
+  this.key_b = await this.str2bytes(key)
+
+  // this.str2bin(key).then((keyBuffer) => {
+
+  // })
+
+  for (let j = 0; j < 16; j++) {
+    this.subkeys[j] = this.subkeyCreate(j)
+  }
+  for (let i = 0, NotBeEncryptByte = this.text.length; NotBeEncryptByte >= 8; i += 8, NotBeEncryptByte -= 8) {
+    this.TB_64b = this.str2bytes(this.text.substr(i, 8))
+    this.IP()
+    for (let j = 0; j < 15; j++) {
+      const originalR = this.TB_R
+      this.TB_R = this.Xor(this.TB_L, this.F_func(this.TB_R, this.subkeys[j]))
+      this.TB_L = originalR
     }
+    this.TB_L = this.Xor(this.TB_L, this.F_func(this.TB_R, this.subkeys[15]))
+    this.RIP()
+    this.executedText += this.bytes2hexStr(this.TB_64b)
+  }
+  if (NotBeEncryptByte != 0) {
+    this.TB_64b = this.str2bytes(this.text.substr(this.text.length - NotBeEncryptByte)) +
+      "0000000000000000000000000000000000000000000000000000000000000000".substr(8 * NotBeEncryptByte)
+    this.IP()
+    for (let j = 0; j < 15; j++) {
+      const originalR = this.TB_R
+      this.TB_R = this.Xor(this.TB_L, this.F_func(this.TB_R, this.subkeys[j]))
+      this.TB_L = originalR
+    }
+    this.TB_L = this.Xor(this.TB_L, this.F_func(this.TB_R, this.subkeys[15]))
+    this.RIP()
+    this.executedText += this.bytes2hexStr(this.TB_64b)
+  }
 
-    return this.executedText
+  return this.executedText
+}
+
+async function decrypt(inputText, key) {
+  for (let j = 0; j < 16; j++) {
+    this.subkeys[15 - j] = this.subkeyCreate(j)
+  }
+  for (let i = 0, NotBeEncryptByte = this.text.length; NotBeEncryptByte >= 16; i += 16, NotBeEncryptByte -= 16) {
+    this.TB_64b = this.hexStr2bytes(this.text.substr(i, 16))
+    this.IP()
+    for (let j = 0; j < 15; j++) {
+      originalR = this.TB_R
+      this.TB_R = this.Xor(this.TB_L, this.F_func(this.TB_R, this.subkeys[j]))
+      this.TB_L = originalR
+    }
+    this.TB_L = this.Xor(this.TB_L, this.F_func(this.TB_R, this.subkeys[15]))
+    this.RIP()
+    this.executedText += this.bytes2str(this.TB_64b)
+  }
+  if (NotBeEncryptByte != 0) {
+    this.TB_64b = this.hexStr2bytes(this.text.substr(this.text.length - NotBeEncryptByte)) +
+      "0000000000000000000000000000000000000000000000000000000000000000".substr(8 * NotBeEncryptByte)
+    this.IP()
+    for (j = 0; j < 15; j++) {
+      originalR = this.TB_R
+      this.TB_R = this.Xor(this.TB_L, this.F_func(this.TB_R, this.subkeys[j]))
+      this.TB_L = originalR
+    }
+    this.TB_L = this.Xor(this.TB_L, this.F_func(this.TB_R, this.subkeys[15]))
+    this.RIP()
+    this.executedText += this.bytes2str(this.TB_64b)
   }
 }
 
